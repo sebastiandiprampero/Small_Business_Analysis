@@ -1,0 +1,193 @@
+---
+title: "Killer Plot"
+author: "Sebastian DiPrampero"
+date: "11/15/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(ggplot2)
+library(grid)
+library(gridBase)
+library(dplyr)
+library(shiny)
+
+dat = read.csv("C:/Users/sebas/OneDrive/Documents/Rstuff/R Stat 405/pums.csv")
+
+subdat = read.csv("C:/Users/sebas/OneDrive/Documents/Rstuff/R Stat 405/SBA_Disaster_Loan_Data_csv.csv")
+
+
+```
+
+
+```{r}
+
+
+grid.newpage()
+
+killer = function(state, row , col)
+{
+  temp = subdat[subdat$DamagedPropertyStateCode == state,]
+  
+  counties = temp$DamagedPropertyCountyParishName
+  
+  losslist = temp$TotalVerifiedLoss
+  
+  df = cbind(counties, losslist)
+  df = data.frame(df)
+  
+  df$losslist = as.double(gsub(",", "", df$losslist))
+
+  df = df %>% group_by(counties) %>% summarise(bloss = sum(losslist))
+  df = data.frame(df)
+  
+  # Initialize total value, used for radius calculation
+  radtot = sum(df$bloss)
+  c = 1
+  
+  sortedloss = df[order(-df$bloss),]
+  
+  # Starting value for labels
+  lab.y = 0.9
+  
+  for(i in sortedloss$bloss)
+  {
+    # Scaling for circle radii
+    rad = i/radtot/4
+    
+    # Make the target parameters
+    circ = circleGrob(x = row*0.25, y = col*0.25, r = rad,
+                    gp = gpar(fill = colors()[c]))
+  
+    # Draw the target
+    grid.draw(circ)
+    
+    # Cycle through colors
+    c = c+10
+
+  }
+  
+  # Reset color and index value
+  c = 1
+  i = 1
+  
+  # If it is the first state chosen
+  if(row == 1)
+    {
+      # Create initial labeling
+      grid.text(paste(state," (Total: $", as.character(radtot), ")"), x = 0.2, y = 0.95,
+              gp = gpar(fontsize = 10, col = "black"))
+      
+      for(z in sortedloss$counties)
+      {
+        # Draw a square with a color matching its county
+        sqr = rectGrob(x = 0.2, y = lab.y, width = 0.03, height = 0.03,
+                         gp = gpar(fill = colors()[c]))
+        grid.draw(sqr)
+        
+        # Write the name of the county, with the amount of money they paid
+        grid.text(paste(z, as.character(sortedloss$bloss[i]), sep = ", $"), 
+                  x = 0.25, y = lab.y, just = "left",
+              gp = gpar(fontsize = 8, col = "black"))
+        
+        # Cycle through color value and shift labels down one block
+        c = c+10
+        lab.y = lab.y-0.03
+        
+        # Move to next county
+        i = i+1
+      }
+    }
+    
+    # If it is the second state chosen:
+    else if(row == 3)
+    {
+      # Create initial labeling
+      grid.text(paste(state," (Total: $", as.character(radtot), ")"), x = 0.7, y = 0.95,
+              gp = gpar(fontsize = 10, col = "black"))
+      for(z in sortedloss$counties)
+      {
+        # Draw a square with a color matching its county
+        sqr = rectGrob(x = 0.7, y = lab.y, width = 0.03, height = 0.03,
+                         gp = gpar(fill = colors()[c]))
+        grid.draw(sqr)
+        
+        # Write the name of the county, with the amount of money they paid
+        grid.text(paste(z, as.character(sortedloss$bloss[i]), sep = ", $"), 
+                  x = 0.75, y = lab.y, just = "left",
+              gp = gpar(fontsize = 8, col = "black"))
+        
+        # Cycle through color value and shift labels down one block
+        c = c+10
+        lab.y = lab.y-0.03
+        
+        # Move to next county
+        i = i+1
+      }
+    }
+    
+}
+
+
+# Test Cases:
+killer("PA", 1, 1)
+killer("HI", 3, 1)
+
+
+# Note: PA has even distribution across counties. Also, from size of each 
+# target, Hawaii paid a lot more than the entirety of PA.
+
+
+#install.packages("shiny")
+library(shiny)
+
+ui = fluidPage(
+  
+  titlePanel("Small Business Natural Disaster Expenses by County"),
+  
+  sidebarLayout(
+    sidebarPanel(
+      selectInput("States", 
+                  "Select two states: ", 
+                  choices = c("AL", "AK", "AZ", "AR", "CA", 
+                              "CO", "CT", "DE", "FL", "GA", 
+                              "HI", "ID", "IL", "IN", "IA", 
+                              "KS", "KY", "LA", "ME", "MD", 
+                              "MA", "MI", "MN", "MS", "MO", 
+                              "MT", "NE", "NV", "NH", "NJ", 
+                              "NM", "NY", "NC", "ND", "OH", 
+                              "OK", "OR", "PA", "RI", "SC", 
+                              "SD", "TN", "TX", "UT", "VT", 
+                              "VA", "WA", "WV", "WI", "WY"),
+                  multiple = TRUE)
+      ),
+    
+    mainPanel(
+      plotOutput("kPlot")
+      
+    )
+  )
+)
+
+
+
+server = function(input, output)
+{
+  
+  output$kPlot = renderPlot({
+    
+    killer(input$States[1], 1, 1)
+    killer(input$States[2], 3, 1)
+
+  })
+}
+
+shinyApp(ui = ui, server = server)
+
+
+
+```
