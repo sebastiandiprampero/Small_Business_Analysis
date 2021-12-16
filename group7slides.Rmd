@@ -1,0 +1,377 @@
+---
+title: "Small Business Data Analysis"
+author: "Sebastian DiPrampero, Steven Cloud, Dileka Gunawardana, Matthew Zamarripa, Yasmin Givens"
+date: "11/27/2021"
+runtime: shiny
+output: ioslides_presentation
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+
+```
+
+
+## About Datasets
+In conducting our final project analysis, we decided to focus on business data, particularly the nuances and relationships that exist between the characteristics of a business/ its owner and the successes/ hardships that must be dealt with. We will begin with a brief introduction to the two data sets that guided our analysis followed by the major components of our methodology and takeaways of our analysis.
+
+## Dataset I: US Census Survey of Business Owners (SBO): 
+The primary dataset used for our group project was called the “2007 Survey of Business Owners (SBO) Public Use Microdata Sample (PUMS)”. The United States Census Bureau conducted this survey, and gathered information from 2,165,680 businesses with 199 data points for each business. 
+
+## Overview of Dataset I
+
+```{r, echo=FALSE, message = FALSE, warning = FALSE}
+# Load data & packages
+library(ggplot2)
+library(dplyr)
+
+dat = read.csv("pums.csv")
+
+```
+Each row represents one business's information
+
+Columns include:
+
+- Info about the owners (age, race, gender, e.t.c.)
+- Info about the business (total employees, total payroll, e.t.c.)
+- Info about the owner's relationship to the business (hours spent working, percentage of company owned, e.t.c.)
+
+## Dataset II: Small Business Administration Disaster Loan Data: 
+The secondary dataset we used was from the Small Business Administration (SBA). It contains a record of all loans administered to small businesses in the United States for natural disaster relief. In order to ensure compatibility between the two datasets, we only included data based from 2007, and in total there were 884 businesses assisted with 15 parameters about each incident recorded. 
+
+## Overview of Dataset II
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+
+dat2 = read.csv("SBA_Disaster_Loan_Data_csv.csv")
+
+```
+Each row represents one incident of a natural disaster in one county
+
+Columns include: 
+
+- Multiple numeric codes indicating specific county, natural disaster, and state 
+- Damaged city's name
+- Total Loss per reported incident
+
+
+## Analysis of Relationships Between Sector & Businesses
+```{r, echo=FALSE, message = FALSE, warning = FALSE}
+primDat <- dat
+library(stringr)
+# First, let's make the numerical codes strings:
+primDat$SECTORNAME <- as.character(primDat$SECTOR)
+
+# We can use each of the unique names to update the number with the true sector name 
+# according to the following website (https://www.census.gov/naics/)
+primDat$SECTORNAME <- str_replace_all(primDat$SECTORNAME, "51", "Information")
+primDat$SECTORNAME <- str_replace_all(primDat$SECTORNAME, "44", "Retail Trade")
+primDat$SECTORNAME <- str_replace_all(primDat$SECTORNAME, "55", "Management of Companies and Enterprises")
+primDat$SECTORNAME <- str_replace_all(primDat$SECTORNAME, "54", "Professional, Scientific, and Technical Services")
+primDat$SECTORNAME <- str_replace_all(primDat$SECTORNAME, "42", "Wholesale Trade")
+primDat$SECTORNAME <- str_replace_all(primDat$SECTORNAME, "31", "Manufacturing")
+primDat$SECTORNAME <- str_replace_all(primDat$SECTORNAME, "22", "Utilities")
+primDat$SECTORNAME <- str_replace_all(primDat$SECTORNAME, "71", "Arts, Entertainment, and Recreation")
+primDat$SECTORNAME <- str_replace_all(primDat$SECTORNAME, "56", "Administrative and Support and Waste Management and Remediation Services")
+primDat$SECTORNAME <- str_replace_all(primDat$SECTORNAME, "23", "Construction")
+primDat$SECTORNAME <- str_replace_all(primDat$SECTORNAME, "52", "Finance and Insurance")
+primDat$SECTORNAME <- str_replace_all(primDat$SECTORNAME, "11", "Agriculture, Forestry, Fishing and Hunting")
+primDat$SECTORNAME <- str_replace_all(primDat$SECTORNAME, "72", "Accommodation and Food Services")
+primDat$SECTORNAME <- str_replace_all(primDat$SECTORNAME, "81", "Other Services (except Public Administration)")
+primDat$SECTORNAME <- str_replace_all(primDat$SECTORNAME, "53", "Real Estate and Rental and Leasing")
+primDat$SECTORNAME <- str_replace_all(primDat$SECTORNAME, "48", "Transportation and Warehousing")
+primDat$SECTORNAME <- str_replace_all(primDat$SECTORNAME, "62", "Health Care and Social Assistance")
+primDat$SECTORNAME <- str_replace_all(primDat$SECTORNAME, "21", "Mining, Quarrying, and Oil and Gas Extraction")
+primDat$SECTORNAME <- str_replace_all(primDat$SECTORNAME, "61", "Educational Services")
+primDat$SECTORNAME <- str_replace_all(primDat$SECTORNAME, "99", "Unavailable")
+
+aggData <- count(subset(primDat, PRMINC1 != '0'), SECTORNAME)
+aggData2 <- count(subset(primDat, PRMINC1 == '1'), SECTORNAME)
+datx <- cbind(aggData$SECTORNAME, aggData2$n/aggData$n)
+colnames(datx) <- c("Sector Name", "Percent Where Income is Primary")
+ggplot(primDat, aes(x = SECTORNAME, y = "Percent Where Business is Primary Income Source")) +
+  geom_bar(stat = "identity") +
+  coord_flip()
+```
+
+
+## Relationships Between Education Level & Businesses
+
+```{r, echo=FALSE, fig.align = 'center', message = FALSE, warning = FALSE}
+# Get rid of "0"'s because these individuals didn't respond to this question
+aggData <- count(subset(dat, PRMINC1 != '0'), PRMINC1, EDUC1)
+aggData <- subset(aggData, EDUC1 != 0)
+# Use geom_col
+x <- ggplot(data = aggData) +
+  geom_col(aes(x = factor(PRMINC1), y=n, fill = factor(EDUC1))) +
+  labs(x = "Business is Primary Income Source?", y = "# Primary Owners", 
+       fill = "Education Group") +
+  scale_x_discrete(labels = c("Yes", "No")) +
+  scale_fill_discrete(labels = c('<High Schl', 'High Schl', 'Tech Schl',  
+                                 'Some Coll', 'Assoc', 'Bach',  '>Mast')) +
+  ggtitle("Number of Businesses that are Primary Owner's 
+          Primary Income Source by Education Group")
+x
+```
+
+
+## Relationship between Owner's Education Level & Gender
+
+```{r, echo=FALSE, message = FALSE, warning = FALSE}
+library(janitor)
+#tabyl(dat, SEX1, EDUC1)
+gender.educ <- as.matrix(data.frame(LessHighScl = c(13057/266624, 44576/747013),
+                                    HighScl = c(63077/266624, 177017/747013),
+                                    TechScl = c(22698/266624, 48736/747013),
+                                    SomeColl = c(63400/266624, 151965/747013),
+                                    Associates = c(23534/266624, 42232/747013),
+                                    Bach = c(92608/266624, 282487/747013),
+                                    GreaterMast = c(62056/266624, 200720/747013) ))
+rownames(gender.educ) <- c("Women" , "Men")
+barplot(gender.educ,
+        col = c("#1b98e0", "#353436"),
+        beside = TRUE,
+        main = "Education Level of Business Owners by Gender Proportion")
+legend("topleft",                                
+       legend = c("Women", "Men"),
+       fill = c("#1b98e0", "#353436"))
+
+```
+
+
+## Relationships Between Gender & Owner Hours
+
+```{r, echo=FALSE, fig.align = 'center', message = FALSE, warning = FALSE}
+boxplot(subset(dat$HOURS1, dat$SEX1 == "F" & dat$HOURS1 != 0),
+        subset(dat$HOURS1, dat$SEX1 == "M" & dat$HOURS1 != 0),
+        names = c("Women", "Men"),
+        ylab = "Hours Category",
+        main = "Primary Business Owner Weekly Hours Worked Category by Gender
+        (1=None, 2=<20, 3=20-39, 4=40, 5=41-59, 6=60+)")
+```
+ 
+
+## Relationships Between Owner’s Education Level & Business Payroll
+
+```{r, echo=FALSE, fig.align = 'center', message = FALSE, warning = FALSE}
+other_data <- count(subset(dat, PAYROLL_NOISY != '0'), PAYROLL_NOISY, EDUC1)
+other_data <- subset(other_data, EDUC1 != 0)
+
+ggplot(data = other_data, mapping = aes(x = EDUC1, y = PAYROLL_NOISY)) + 
+  geom_point() + 
+  labs(x = "Education of Primary Owner", y = "Payroll of Business") + 
+ggtitle("Business Payroll Based on Education Level of Primary Owner 
+        (1=<HS, 2=HS, 3=Trade, 4=Some Coll, 5=Assoc, 6=Bach, 7=Mast+)")
+```
+
+
+## Relationships Between Owner’s Age & Business Number of Employees
+
+```{r, echo=FALSE, fig.align = 'center', message = FALSE, warning = FALSE}
+plot(x = dat$AGE1,y = dat$EMPLOYMENT_NOISY,
+     xlab = "Primary Owner's Age Group", ylab = "Number of Employees",
+     main = "Total Employees Based on Primary Owner's Age Group
+     (1=<25, 2=25-34, 3=35-44, 4=45-54, 5=55-64, 6=65+)")
+```
+
+
+
+## Killer Plot
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+library(ggplot2)
+library(grid)
+library(gridBase)
+library(dplyr)
+library(shiny)
+
+
+grid.newpage()
+
+killer = function(state, row , col)
+{
+  temp = dat2[dat2$DamagedPropertyStateCode == state,]
+  
+  counties = temp$DamagedPropertyCountyParishName
+  
+  losslist = temp$TotalVerifiedLoss
+  
+  df = cbind(counties, losslist)
+  df = data.frame(df)
+  
+  df$losslist = as.double(gsub(",", "", df$losslist))
+
+  df = df %>% group_by(counties) %>% summarise(bloss = sum(losslist))
+  df = data.frame(df)
+  
+  # Initialize total value, used for radius calculation
+  radtot = sum(df$bloss)
+  c = 1
+  
+  sortedloss = df[order(-df$bloss),]
+  
+  # Starting value for labels
+  lab.y = 0.9
+  
+  for(i in sortedloss$bloss)
+  {
+    # Scaling for circle radii
+    rad = i/radtot/4
+    
+    # Make the target parameters
+    circ = circleGrob(x = row*0.25, y = col*0.25, r = rad,
+                    gp = gpar(fill = colors()[c]))
+  
+    # Draw the target
+    grid.draw(circ)
+    
+    # Cycle through colors
+    c = c+10
+
+  }
+  
+  # Reset color and index value
+  c = 1
+  i = 1
+  
+  # If it is the first state chosen
+  if(row == 1)
+    {
+      # Create initial labeling
+      grid.text(paste(state," (Total: $", as.character(radtot), ")"), x = 0.2, y = 0.95,
+              gp = gpar(fontsize = 10, col = "black"))
+      
+      for(z in sortedloss$counties)
+      {
+        # Draw a square with a color matching its county
+        sqr = rectGrob(x = 0.2, y = lab.y, width = 0.03, height = 0.03,
+                         gp = gpar(fill = colors()[c]))
+        grid.draw(sqr)
+        
+        # Write the name of the county, with the amount of money they paid
+        grid.text(paste(z, as.character(sortedloss$bloss[i]), sep = ", $"), 
+                  x = 0.25, y = lab.y, just = "left",
+              gp = gpar(fontsize = 8, col = "black"))
+        
+        # Cycle through color value and shift labels down one block
+        c = c+10
+        lab.y = lab.y-0.03
+        
+        # Move to next county
+        i = i+1
+      }
+    }
+    
+    # If it is the second state chosen:
+    else if(row == 3)
+    {
+      # Create initial labeling
+      grid.text(paste(state," (Total: $", as.character(radtot), ")"), x = 0.7, y = 0.95,
+              gp = gpar(fontsize = 10, col = "black"))
+      for(z in sortedloss$counties)
+      {
+        # Draw a square with a color matching its county
+        sqr = rectGrob(x = 0.7, y = lab.y, width = 0.03, height = 0.03,
+                         gp = gpar(fill = colors()[c]))
+        grid.draw(sqr)
+        
+        # Write the name of the county, with the amount of money they paid
+        grid.text(paste(z, as.character(sortedloss$bloss[i]), sep = ", $"), 
+                  x = 0.75, y = lab.y, just = "left",
+              gp = gpar(fontsize = 8, col = "black"))
+        
+        # Cycle through color value and shift labels down one block
+        c = c+10
+        lab.y = lab.y-0.03
+        
+        # Move to next county
+        i = i+1
+      }
+    }
+    
+}
+
+
+# Test Cases:
+#killer("PA", 1, 1)
+#killer("HI", 3, 1)
+
+
+ui = fluidPage(
+  
+  titlePanel("Small Business Natural Disaster Expenses by County"),
+  
+  sidebarLayout(
+    sidebarPanel(
+      selectInput("States", 
+                  "Select two states: ", 
+                  choices = c("AL", "AK", "AZ", "AR", "CA", 
+                              "CO", "CT", "DE", "FL", "GA", 
+                              "HI", "ID", "IL", "IN", "IA", 
+                              "KS", "KY", "LA", "ME", "MD", 
+                              "MA", "MI", "MN", "MS", "MO", 
+                              "MT", "NE", "NV", "NH", "NJ", 
+                              "NM", "NY", "NC", "ND", "OH", 
+                              "OK", "OR", "PA", "RI", "SC", 
+                              "SD", "TN", "TX", "UT", "VT", 
+                              "VA", "WA", "WV", "WI", "WY"),
+                  multiple = TRUE)
+      ),
+    
+    mainPanel(
+      plotOutput("kPlot")
+      
+    )
+  )
+)
+
+
+
+server = function(input, output)
+{
+  
+  output$kPlot = renderPlot({
+    
+    killer(input$States[1], 1, 1)
+    killer(input$States[2], 3, 1)
+
+  })
+}
+
+shinyApp(ui = ui, server = server)
+
+
+```
+
+
+
+## Killer Plot Example 1 
+
+```{r, echo=FALSE, message = FALSE, warning = FALSE}
+
+killer("PA", 1, 1)
+killer("HI", 3, 1)
+
+```
+
+
+## Killer Plot Example 2 
+
+```{r, echo=FALSE, message = FALSE, warning = FALSE}
+
+killer("IL", 1, 1)
+killer("IN", 3, 1)
+
+```
+
+## Conclusions
+
+Based on our research and exploration of our two datasets, we have found three major conlcusions:
+
+- In our data, there is little difference between male and female business owners in terms of hours worked, education level, and the business being a primary income source
+- There seemed to be little correlation between natural disasters striking a state and that state's reported payroll
+- The distribution of loans by the gov seemed to favor states with more counties and larger populations
+
+## Discussion
+
+Thanks for listening!
