@@ -7,4 +7,4 @@ See our group's Final Report file for information about our research and data an
 
 See below for slideshow presentation made in RMarkdown on our findings from our project:
 
-file:///C:/Users/sebas/OneDrive/Documents/Stat%20405/group7slides.html#1
+[bruh](file:///C:/Users/sebas/OneDrive/Documents/Stat%20405/group7slides.html#1)
